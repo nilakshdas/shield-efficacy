@@ -1,0 +1,6 @@
+cleverhans
+foolbox
+keras==2.2.4
+pillow
+tensorflow-gpu==1.12.0
+tqdm

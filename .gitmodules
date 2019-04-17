@@ -1,0 +1,4 @@
+[submodule "differentiable-jpeg"]
+	path = differentiable-jpeg
+	url = https://github.com/nilakshdas/differentiable-jpeg.git
+	branch = master

@@ -6,7 +6,7 @@ import keras
 import tensorflow as tf
 
 from processing import (differentiable_jpeg, 
-                        differentiable_slq, 
+                        slq, differentiable_slq, 
                         resnet50_preprocessing_fn)
 
 
@@ -99,9 +99,9 @@ class EvalSHIELDModel(object):
         return y[tf.argmax(count)]
     
     def get_predicted_class(self, x):
-        with tf.name_scope('DifferentiableSLQPreprocessing'):
+        with tf.name_scope('SLQPreprocessing'):
             x = resnet50_preprocessing_fn(
-                tf.map_fn(differentiable_slq, x))
+                tf.map_fn(slq, x))
         
         preds = tf.transpose(tf.stack(
             [model.get_predicted_class(x)

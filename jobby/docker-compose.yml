@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+    mongodb:
+        build: ./docker/mongodb
+        ports:
+            - 27017:27017
+        volumes:
+            - ./scratch/mongodb:/data/db
+
+    redis:
+        build: ./docker/redis
+        ports:
+            - 6379:6379
+        volumes:
+            - ./scratch/redis:/data
+
+    rabbitmq:
+        build: 
+            context: ./docker/rabbitmq
+            args:
+                RABBITMQ_VHOSTS: jobby
+        ports:
+            - 5672:5672
+            - 15672:15672

@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 
 
-def _decode_tf_example(serialized_example, image_size=224):
+def _decode_tf_example(serialized_example, image_size=299):
     """Parses and decodes a serialized tensorflow example.
     Args:
         serialized_example (tf.train.Example):

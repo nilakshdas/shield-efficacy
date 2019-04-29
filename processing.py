@@ -6,8 +6,8 @@ import tensorflow as tf
 sys.path.append('differentiable-jpeg')
 from utils import differentiable_jpeg
 
-
-resnet50_preprocessing_fn = keras.applications.resnet50.preprocess_input
+# https://github.com/keras-team/keras-applications/blob/master/keras_applications/imagenet_utils.py#L157
+resnet50_keras_preprocessing_fn = keras.applications.resnet50.preprocess_input
 
 
 def differentiable_slq(x, qualities=(20, 40, 60, 80), patch_size=8):

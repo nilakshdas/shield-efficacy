@@ -1,4 +1,3 @@
-from functools import partial
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -15,8 +14,6 @@ from metrics import AccuracyMeter
 from model import (AttackSHIELDModel, 
                    EvalSHIELDModel, 
                    load_jpeg_trained_ensemble)
-from processing import (differentiable_jpeg, 
-                        resnet50_preprocessing_fn)
 
 
 FLAGS = flags.FLAGS
@@ -31,7 +28,7 @@ flags.DEFINE_integer(
     'seed', 1234,
     'Seed for the PRNG for this experiment')
 flags.DEFINE_integer(
-    'batch_size', 4,
+    'batch_size', 16,
     'Batch size for evaluating the results')
 flags.DEFINE_integer(
     'epsilon', 16,
@@ -69,52 +66,57 @@ def main(argv):
     keras.backend.set_session(sess)
     keras.backend.set_learning_phase(0)
 
-    load_ensemble = partial(
-        load_jpeg_trained_ensemble, 
-        path_format=MODEL_CKPT_PATH_FORMAT)
-
-    attack_model = AttackSHIELDModel(
-        load_ensemble(qualities=FLAGS.attack_models),
-        attack_differentiable_slq=FLAGS.attack_differentiable_slq)
-    
-    eval_model = EvalSHIELDModel(
-        load_ensemble(qualities=FLAGS.eval_models))
-
-    pgd = ProjectedGradientDescent(attack_model, sess=sess)
-
-    dataset = load_tfrecords_dataset(TFRECORDS_FILENAMES)
-    dataset = dataset.batch(FLAGS.batch_size)
-    iterator = dataset.make_one_shot_iterator()
-    next_element = iterator.get_next()
-    
-    X, y_true = next_element
-    X_adv = X_adv = pgd.generate(
-        X, eps=FLAGS.epsilon, 
-        eps_iter=FLAGS.eps_iter, 
-        nb_iter=FLAGS.nb_iter)
-    y_pred_shield = eval_model.get_predicted_class(X_adv)
-
-    accuracy = AccuracyMeter()
-    
-    with sess.as_default(), tqdm(total=1171, unit='imgs') as pbar:
-        writer = tf.summary.FileWriter(LOGS_DIR, sess.graph)
+    with tf.name_scope('TFRecordsLoader'):
+        dataset = load_tfrecords_dataset(TFRECORDS_FILENAMES)
+        dataset = dataset.batch(FLAGS.batch_size)
+        iterator = dataset.make_one_shot_iterator()
+        next_element = iterator.get_next()
         
-        while True:
-            try:
-                y_true_np, y_pred_shield_np = \
-                    sess.run([y_true, y_pred_shield])
-                
-                accuracy.offer(
-                    y_pred_shield_np, y_true_np)
-                
-                pbar.set_postfix(
-                    accuracy=accuracy.evaluate())
-                pbar.update(y_true_np.shape[0])
+        X, y_true = next_element
 
-            except tf.errors.OutOfRangeError:
-                break
+    with sess.as_default():
+        attack_model_paths = [MODEL_NAME_TO_CKPT_PATH_MAP[m] 
+                              for m in FLAGS.attack_models]
+        eval_model_paths = [MODEL_NAME_TO_CKPT_PATH_MAP[m] 
+                            for m in FLAGS.eval_models]
 
+        attack_model = AttackSHIELDModel(
+            load_jpeg_trained_ensemble(
+                FLAGS.attack_models, attack_model_paths),
+            attack_differentiable_slq=FLAGS.attack_differentiable_slq)
+        
+        eval_model = EvalSHIELDModel(
+            load_jpeg_trained_ensemble(
+                FLAGS.eval_models, eval_model_paths))
+
+        attack = ProjectedGradientDescent(attack_model, sess=sess)
+        attack_kwargs = {
+            'eps': FLAGS.epsilon, 
+            'eps_iter': FLAGS.eps_iter, 
+            'nb_iter': FLAGS.nb_iter}
+
+        X_adv = attack.generate(X, **attack_kwargs)
+        y_pred_shield = eval_model.get_predicted_class(X_adv)
+    
+        writer = tf.summary.FileWriter(LOGS_DIR, sess.graph)
         writer.close()
+        
+        accuracy = AccuracyMeter()
+        with tqdm(total=1171, unit='imgs') as pbar:
+            while True:
+                try:
+                    y_true_np, y_pred_shield_np = \
+                        sess.run([y_true, y_pred_shield])
+                    
+                    accuracy.offer(
+                        y_pred_shield_np, y_true_np)
+                    
+                    pbar.set_postfix(
+                        accuracy=accuracy.evaluate())
+                    pbar.update(y_true_np.shape[0])
+
+                except tf.errors.OutOfRangeError:
+                    break
     
     logging.info('accuracy = %.04f' % accuracy.evaluate())
 

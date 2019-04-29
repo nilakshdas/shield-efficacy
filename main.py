@@ -89,8 +89,12 @@ def main(argv):
             load_jpeg_trained_ensemble(
                 FLAGS.eval_models, eval_model_paths))
 
+        y_target = attack_model.get_least_likely_prediction(X)
+        y_target_one_hot = tf.one_hot(y_target, 1000, axis=-1)
+        
         attack = ProjectedGradientDescent(attack_model, sess=sess)
         attack_kwargs = {
+            'y_target': y_target_one_hot,
             'eps': FLAGS.epsilon, 
             'eps_iter': FLAGS.eps_iter, 
             'nb_iter': FLAGS.nb_iter}
@@ -101,24 +105,27 @@ def main(argv):
         writer = tf.summary.FileWriter(LOGS_DIR, sess.graph)
         writer.close()
         
-        accuracy = AccuracyMeter()
+        model_accuracy = AccuracyMeter()
+        attack_success = AccuracyMeter()
         with tqdm(total=1171, unit='imgs') as pbar:
             while True:
                 try:
-                    y_true_np, y_pred_shield_np = \
-                        sess.run([y_true, y_pred_shield])
+                    y_true_np, y_target_np, y_pred_shield_np = \
+                        sess.run([y_true, y_target, y_pred_shield])
                     
-                    accuracy.offer(
-                        y_pred_shield_np, y_true_np)
+                    model_accuracy.offer(y_pred_shield_np, y_true_np)
+                    attack_success.offer(y_pred_shield_np, y_target_np)
                     
                     pbar.set_postfix(
-                        accuracy=accuracy.evaluate())
+                        model_accuracy=model_accuracy.evaluate(),
+                        attack_success=attack_success.evaluate())
                     pbar.update(y_true_np.shape[0])
 
                 except tf.errors.OutOfRangeError:
                     break
     
-    logging.info('accuracy = %.04f' % accuracy.evaluate())
+    logging.info('model_accuracy = %.04f' % model_accuracy.evaluate())
+    logging.info('attack_success = %.04f' % attack_success.evaluate())
 
 
 if __name__ == "__main__":

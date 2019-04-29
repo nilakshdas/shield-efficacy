@@ -38,8 +38,13 @@ def load_jpeg_trained_ensemble(model_names, model_paths, sess=None):
 
 class CleverhansEvalModel(object):
     def get_predicted_class(self, x):
-        probs = self.get_probs(X)
+        probs = self.get_probs(x)
         preds = tf.argmax(probs, axis=1)
+        return preds
+
+    def get_least_likely_prediction(self, x):
+        probs = self.get_probs(x)
+        preds = tf.argmin(probs, axis=1)
         return preds
 
 

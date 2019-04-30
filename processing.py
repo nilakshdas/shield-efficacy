@@ -1,9 +1,11 @@
+import os
 import sys
 
 import keras
 import tensorflow as tf
 
-sys.path.append('differentiable-jpeg')
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'differentiable-jpeg'))
 from utils import differentiable_jpeg
 
 # https://github.com/keras-team/keras-applications/blob/master/keras_applications/imagenet_utils.py#L157

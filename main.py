@@ -61,7 +61,7 @@ def main(argv):
         k: v for k, v in FLAGS.flag_values_dict().items() 
         if k in args_keys}
 
-    with JobbyJob('127.0.0.1:27017', args_dict) as job:
+    with JobbyJob(args_dict) as job:
         logging.info('Attacking models: %s' % FLAGS.attack_models)
         logging.info('Evaluating with models: %s' % FLAGS.eval_models)
         logging.info('Epsilon for PGD attack = %d' % FLAGS.epsilon)

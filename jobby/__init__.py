@@ -1,13 +1,24 @@
 import datetime as _dt
+import os as _os
+
+from envbash import load_envbash as _load_env
 from pymongo import MongoClient as _MC
+
+from .utils import get_env as _get_env
+
+
+_load_env(
+    _os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)), 
+        '.env'))
 
 
 class JobbyJob(object):
-    def __init__(self, db_url, args, namespace='job'):
+    def __init__(self, args, namespace='job'):
         assert type(args) is dict
 
+        self._db_url = _get_env('JOBBY_DATABASE_URL')
         self._namespace = namespace
-        self._db_url = db_url
         self._args = args
         self._out = dict()
         self._started = None

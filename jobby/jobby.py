@@ -10,27 +10,21 @@ from celery.signals import celeryd_after_setup
 import libtmux
 from libtmux.exc import TmuxSessionExists
 
-
-def _get_env(var_name, required=True):
-    val = os.getenv(var_name)
-    if required:
-        assert val is not None, \
-            "%s environment variable not found." % var_name
-    return val if val is not None else ""
+from .utils import get_env
 
 
 APP_NAME = 'jobby'
 TASK_NAME = 'run_script'
 STABLE_STATE = 'RUNNING'
-BROKER_URL = _get_env('JOBBY_BROKER_URL')
-BACKEND_URL = _get_env('JOBBY_BACKEND_URL')
-DATABASE_URL = _get_env('JOBBY_DATABASE_URL')
-RUNTIME_ENV = _get_env('JOBBY_PYTHON_RUNTIME_ENV')
-JOBBY_JOBS_DIR = _get_env('JOBBY_JOBS_DIR')
-JOBBY_SCRATCH_DIR = _get_env('JOBBY_SCRATCH_DIR')
+BROKER_URL = get_env('JOBBY_BROKER_URL')
+BACKEND_URL = get_env('JOBBY_BACKEND_URL')
+DATABASE_URL = get_env('JOBBY_DATABASE_URL')
+RUNTIME_ENV = get_env('JOBBY_PYTHON_RUNTIME_ENV')
+JOBBY_JOBS_DIR = get_env('JOBBY_JOBS_DIR')
+JOBBY_SCRATCH_DIR = get_env('JOBBY_SCRATCH_DIR')
 JOBBY_LOGS_DIR = os.path.join(JOBBY_SCRATCH_DIR, 'logs')
 JOBBY_LOCKS_DIR = os.path.join(JOBBY_SCRATCH_DIR, 'locks')
-CUDA_VISIBLE_DEVICES = _get_env('CUDA_VISIBLE_DEVICES', required=False)
+CUDA_VISIBLE_DEVICES = get_env('CUDA_VISIBLE_DEVICES', required=False)
 
 
 assert os.path.isdir(JOBBY_JOBS_DIR)

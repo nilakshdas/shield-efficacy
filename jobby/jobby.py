@@ -10,7 +10,7 @@ from celery.signals import celeryd_after_setup
 import libtmux
 from libtmux.exc import TmuxSessionExists
 
-from .utils import get_env
+from utils import get_env
 
 
 APP_NAME = 'jobby'

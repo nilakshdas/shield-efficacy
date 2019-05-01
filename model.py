@@ -4,6 +4,7 @@ import os
 from cleverhans.model import Model as CleverhansModel
 from cleverhans.utils_keras import KerasModelWrapper
 import keras
+import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.nets.resnet_v2 import \
     resnet_arg_scope, resnet_v2_50
@@ -46,6 +47,9 @@ class CleverhansEvalModel(object):
         probs = self.get_probs(x)
         preds = tf.argmin(probs, axis=1)
         return preds
+
+    def get_flat_weights(self):
+        raise NotImplementedError
 
 
 class ResNet50v2TFSlimModel(CleverhansModel, CleverhansEvalModel):
@@ -92,6 +96,15 @@ class ResNet50v2TFSlimModel(CleverhansModel, CleverhansEvalModel):
         x = tf.subtract(x, 0.5)
         x = tf.multiply(x, 2.0)
         return x
+    
+    def get_flat_weights(self):
+        v = np.empty(0)
+        reader = tf.train.NewCheckpointReader(self._get_latest_checkpoint_path())
+        var_to_shape_map = reader.get_variable_to_shape_map()
+        for key in sorted(var_to_shape_map):
+            weights = reader.get_tensor(key)
+            v = np.concatenate([v, weights.flatten()])
+        return v
     
     def fprop(self, x):
         num_original_classes = 1001
@@ -145,6 +158,13 @@ class ResNet50v2KerasModel(KerasModelWrapper, CleverhansEvalModel):
 
     def _preprocessing_fn(self, x):
         return resnet50_keras_preprocessing_fn(x)
+
+    def get_flat_weights(self):
+        v = np.empty(0)
+        for layer in self.model.layers:
+            for weights in layer.get_weights():
+                v = np.concatenate([v, weights.flatten()])
+        return v
     
     def fprop(self, x):
         with tf.name_scope(self._var_scope):

@@ -156,14 +156,13 @@ class AttackSHIELDModel(CleverhansModel, CleverhansEvalModel):
     def __init__(
         self, ensemble,
         attack_jpeg_qualities=None,
-        attack_differentiable_slq=True):
+        attack_differentiable_slq=False):
         
         super(AttackSHIELDModel, self).__init__()
 
-        if not attack_differentiable_slq and attack_jpeg_qualities is None:
-            attack_jpeg_qualities = [
-                None, 90, 80, 70, 60, 
-                50, 40, 30, 20, 10]
+        if attack_jpeg_qualities is None \
+                and (not attack_differentiable_slq):
+            attack_jpeg_qualities = [80, 60, 40, 20]
 
         self.ensemble = ensemble
         self.layer_names = ['logits', 'probs']
@@ -193,16 +192,13 @@ class AttackSHIELDModel(CleverhansModel, CleverhansEvalModel):
                 model.get_logits(x_) 
                 for x_ in preprocessed_inputs]
 
-            outer_logits.append(
-                tf.math.divide(
-                    tf.math.add_n(inner_logits), 
-                    num_preprocessed_inputs))
+            outer_logits.append(tf.math.add_n(inner_logits))
 
         out = dict()
         
         out['logits'] = tf.math.divide(
             tf.math.add_n(outer_logits),
-            num_preprocessed_inputs)
+            num_preprocessed_inputs * num_models)
         
         out['probs'] = tf.nn.softmax(out['logits'])
 

@@ -47,8 +47,8 @@ flags.DEFINE_integer(
     'nb_iter', 20,
     'nb_iter parameter to be used with PGD attack')
 flags.DEFINE_boolean(
-    'attack_jpeg_qualites', False,
-    'Attack differentiable JPEG qualities instead of differentiable SLQ')
+    'attack_differentiable_slq', False,
+    'Attack differentiable SLQ instead of differentiable JPEG qualities')
 flags.DEFINE_boolean(
     'eval_only', False,
     'Set this to True if model should only be evaluated, not attacked')
@@ -65,7 +65,7 @@ def main(argv):
         'num_images', 'batch_size',
         'attack_models', 'eval_models', 
         'epsilon', 'eps_iter', 'nb_iter',
-        'attack_jpeg_qualites', 'eval_only']
+        'attack_differentiable_slq', 'eval_only']
 
     args_dict = {
         k: v for k, v in FLAGS.flag_values_dict().items() 
@@ -110,12 +110,10 @@ def main(argv):
 
             perform_attack = not FLAGS.eval_only
             if perform_attack:
-                attack_differentiable_slq = not FLAGS.attack_jpeg_qualites
-                
                 attack_model = AttackSHIELDModel(
                     load_jpeg_trained_ensemble(
                         FLAGS.attack_models, attack_model_paths),
-                    attack_differentiable_slq=attack_differentiable_slq)
+                    attack_differentiable_slq=FLAGS.attack_differentiable_slq)
 
                 y_target = attack_model.get_least_likely_prediction(X)
                 y_target_one_hot = tf.one_hot(y_target, 1000, axis=-1)

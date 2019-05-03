@@ -103,7 +103,12 @@ class ResNet50v2TFSlimModel(CleverhansModel, CleverhansEvalModel):
         var_to_shape_map = reader.get_variable_to_shape_map()
         for key in sorted(var_to_shape_map):
             weights = reader.get_tensor(key)
-            v = np.concatenate([v, weights.flatten()])
+            
+            v_ = weights.flatten()
+            v_ = v_ / np.linalg.norm(v_)
+            
+            v = np.concatenate([v, v_])
+        
         return v
     
     def fprop(self, x):
@@ -163,7 +168,10 @@ class ResNet50v2KerasModel(KerasModelWrapper, CleverhansEvalModel):
         v = np.empty(0)
         for layer in self.model.layers:
             for weights in layer.get_weights():
-                v = np.concatenate([v, weights.flatten()])
+                v_ = weights.flatten()
+                v_ = v_ / np.linalg.norm(v_)
+                
+                v = np.concatenate([v, v_])
         return v
     
     def fprop(self, x):
@@ -203,23 +211,17 @@ class AttackSHIELDModel(CleverhansModel, CleverhansEvalModel):
 
     def fprop(self, x):
         preprocessed_inputs = self._preprocessing_fn(x)
-        num_preprocessed_inputs = len(preprocessed_inputs)
-        num_models = len(self.ensemble)
-        outer_logits = list()
         
+        all_logits = list()
         for model in self.ensemble:
-            inner_logits = [
+            all_logits.extend([
                 model.get_logits(x_) 
-                for x_ in preprocessed_inputs]
-
-            outer_logits.append(tf.math.add_n(inner_logits))
+                for x_ in preprocessed_inputs])
 
         out = dict()
-        
         out['logits'] = tf.math.divide(
-            tf.math.add_n(outer_logits),
-            num_preprocessed_inputs * num_models)
-        
+            tf.math.add_n(all_logits),
+            len(all_logits))
         out['probs'] = tf.nn.softmax(out['logits'])
 
         return out
